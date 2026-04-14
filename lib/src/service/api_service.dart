@@ -12,12 +12,17 @@ class ApiService {
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
+    print('💾 Token guardado: ${token.substring(0, 20)}...');
   }
 
   // Obtener token guardado
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    final token = prefs.getString('auth_token');
+    print(
+      '🔑 Token recuperado: ${token != null ? token.substring(0, 20) + "..." : "NO HAY TOKEN"}',
+    );
+    return token;
   }
 
   // Limpiar token (logout)
