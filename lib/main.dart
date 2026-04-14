@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
       title: 'WhatsApp Clone',
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: AuthScreen(),
+      debugShowCheckedModeBanner: false,
       routes: {
         '/auth': (context) => AuthScreen(),
         '/chats': (context) {

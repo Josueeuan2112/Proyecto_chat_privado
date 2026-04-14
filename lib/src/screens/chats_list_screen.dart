@@ -52,17 +52,31 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
   // FUNCIÓN PARA CARGAR USUARIOS
   Future<void> _loadUsers() async {
+    print('📤 Iniciando carga de usuarios...');
     setState(() {
       isLoading = true;
     });
 
-    final usersList = await _apiService.getUsers();
+    try {
+      final usersList = await _apiService.getUsers();
 
-    if (mounted) {
-      setState(() {
-        users = usersList;
-        isLoading = false;
-      });
+      print('✅ Usuarios recibidos: ${usersList.length}');
+      print('📊 Datos: $usersList');
+
+      if (mounted) {
+        setState(() {
+          users = usersList;
+          isLoading = false;
+        });
+        print('✅ Estado actualizado. Usuarios en pantalla: ${users.length}');
+      }
+    } catch (e) {
+      print('❌ Error cargando usuarios: $e');
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
