@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:whatsapp_flutter/src/providers/notification_provide.dart';
 import 'package:whatsapp_flutter/src/screens/profile_screen.dart';
 import 'package:whatsapp_flutter/src/service/api_service.dart';
 import 'package:whatsapp_flutter/src/service/socket_service.dart';
@@ -45,6 +47,12 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _isComposing = _messageController.text.isNotEmpty;
       });
+    });
+
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mounted) {
+        context.read<NotificationProvider>().markAsRead(widget.otherUserId);
+      }
     });
   }
 

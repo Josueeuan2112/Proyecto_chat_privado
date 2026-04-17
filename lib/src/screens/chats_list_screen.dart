@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:whatsapp_flutter/src/providers/notification_provide.dart';
 import 'package:whatsapp_flutter/src/screens/profile_screen.dart';
 import 'package:whatsapp_flutter/src/service/api_service.dart';
 import 'package:whatsapp_flutter/src/service/socket_service.dart';
@@ -41,6 +42,12 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     _loadUsers();
     _loadCurrentUserEmail();
     _searchController.addListener(_filterUsers);
+
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mounted) {
+        context.read<NotificationProvider>().loadUnreadCounts();
+      }
+    });
   }
 
   Future<void> _loadCurrentUserEmail() async {
@@ -309,89 +316,164 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
 
                       return Padding(
                         padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.06),
-                                blurRadius: 8,
-                                offset: Offset(0, 2),
+                        child: Consumer<NotificationProvider>(
+                          builder: (context, notificationProvider, _) {
+                            final unreadCount = notificationProvider
+                                .getUnreadCount(user['id']);
+
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: unreadCount > 0
+                                    ? AppColors.primaryBlue.withOpacity(0.05)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: unreadCount > 0
+                                    ? Border.all(
+                                        color: AppColors.primaryBlue
+                                            .withOpacity(0.2),
+                                        width: 1,
+                                      )
+                                    : null,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.06),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => _openChat(user),
-                              borderRadius: BorderRadius.circular(16),
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: Row(
-                                  children: [
-                                    // AVATAR CON ESTADO
-                                    Stack(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _openChat(user),
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Padding(
+                                    padding: EdgeInsets.all(12),
+                                    child: Row(
                                       children: [
-                                        UserAvatar(
-                                          username: user['username'],
-                                          size: 56,
+                                        // AVATAR CON ESTADO
+                                        Stack(
+                                          children: [
+                                            UserAvatar(
+                                              username: user['username'],
+                                              size: 56,
+                                            ),
+                                            // Indicador online/offline
+                                            Positioned(
+                                              bottom: 0,
+                                              right: 0,
+                                              child: Container(
+                                                width: 16,
+                                                height: 16,
+                                                decoration: BoxDecoration(
+                                                  color: isOnline
+                                                      ? AppColors.successGreen
+                                                      : Colors.grey.shade400,
+                                                  shape: BoxShape.circle,
+                                                  border: Border.all(
+                                                    color: Colors.white,
+                                                    width: 2,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+
+                                            // BADGE DE MENSAJES NO LEÍDOS
+                                            if (unreadCount > 0)
+                                              Positioned(
+                                                top: 0,
+                                                right: 0,
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.red,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: Colors.white,
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    unreadCount > 9
+                                                        ? '9+'
+                                                        : unreadCount
+                                                              .toString(),
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 11,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
                                         ),
-                                        // Indicador online/offline
-                                        Positioned(
-                                          bottom: 0,
-                                          right: 0,
-                                          child: Container(
-                                            width: 16,
-                                            height: 16,
+                                        SizedBox(width: 16),
+
+                                        // INFORMACIÓN DEL USUARIO
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                user['username'],
+                                                style: AppTextStyles.titleMedium
+                                                    .copyWith(fontSize: 16),
+                                              ),
+                                              SizedBox(height: 4),
+                                              Text(
+                                                user['email'],
+                                                style: AppTextStyles.caption,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+
+                                        // FLECHA O BADGE
+                                        if (unreadCount == 0)
+                                          Icon(
+                                            Icons.chevron_right,
+                                            color: AppColors.primaryBlue,
+                                          )
+                                        else
+                                          Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: isOnline
-                                                  ? AppColors.successGreen
-                                                  : Colors.grey.shade400,
-                                              shape: BoxShape.circle,
-                                              border: Border.all(
+                                              color: Colors.red,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              unreadCount > 99
+                                                  ? '99+'
+                                                  : unreadCount.toString(),
+                                              style: TextStyle(
                                                 color: Colors.white,
-                                                width: 2,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
                                           ),
-                                        ),
                                       ],
                                     ),
-                                    SizedBox(width: 16),
-
-                                    // INFORMACIÓN DEL USUARIO
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            user['username'],
-                                            style: AppTextStyles.titleMedium
-                                                .copyWith(fontSize: 16),
-                                          ),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            user['email'],
-                                            style: AppTextStyles.caption,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    // FLECHA
-                                    Icon(
-                                      Icons.chevron_right,
-                                      color: AppColors.primaryBlue,
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                       );
                     },

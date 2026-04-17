@@ -187,4 +187,56 @@ class ApiService {
       return {'success': false};
     }
   }
+
+  // FUNCIÓN PARA OBTENER CONTEOS DE MENSAJES NO LEÍDOS
+  Future<Map<String, dynamic>> getUnreadCounts() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/messages/unread/count'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('📊 Conteos recibidos: $data');
+        return Map<String, dynamic>.from(data);
+      } else {
+        return {};
+      }
+    } catch (e) {
+      print('❌ Error obteniendo conteos: $e');
+      return {};
+    }
+  }
+
+  // FUNCIÓN PARA MARCAR MENSAJES COMO LEÍDOS
+  Future<void> markMessagesAsRead(int userId) async {
+    try {
+      final token = await getToken();
+      if (token == null) return;
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/messages/mark-read'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'receiverId': userId}),
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ Mensajes marcados como leídos');
+      }
+    } catch (e) {
+      print('❌ Error marcando como leído: $e');
+    }
+  }
 }

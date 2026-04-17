@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:whatsapp_flutter/src/providers/notification_provide.dart';
 import 'package:whatsapp_flutter/src/providers/user_provider.dart';
 import 'package:whatsapp_flutter/src/screens/auth_screen.dart';
 import 'package:whatsapp_flutter/src/screens/chats_list_screen.dart';
 import 'package:whatsapp_flutter/src/screens/profile_screen.dart';
-import 'package:provider/provider.dart';
 
 void main() {
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => UserProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
+      ],
       child: const MyApp(),
     ),
   );
