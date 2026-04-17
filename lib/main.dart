@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:whatsapp_flutter/src/screens/auth_screen.dart';
 import 'package:whatsapp_flutter/src/screens/chats_list_screen.dart';
+import 'package:whatsapp_flutter/src/screens/profile_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -28,6 +29,11 @@ class MyApp extends StatelessWidget {
             token: args?['token'] ?? '',
           );
         },
+        '/profile': (context) => ProfileScreen(
+          userId: 1,
+          username: 'Usuario',
+          email: 'email@example.com',
+        ),
       },
     );
   }

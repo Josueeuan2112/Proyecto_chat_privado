@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:whatsapp_flutter/src/screens/profile_screen.dart';
 import 'package:whatsapp_flutter/src/service/api_service.dart';
 import 'package:whatsapp_flutter/src/service/socket_service.dart';
+import 'package:whatsapp_flutter/src/constants/app_colors.dart';
+import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
+import 'package:whatsapp_flutter/src/widgets/user_avatar.dart';
 import 'chat_screen.dart';
 
 class ChatsListScreen extends StatefulWidget {
@@ -23,20 +27,21 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   late SocketService _socketService;
 
   List<Map<String, dynamic>> users = [];
+  List<Map<String, dynamic>> filteredUsers = [];
   bool isLoading = true;
+  TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _initializeSocket();
     _loadUsers();
+    _searchController.addListener(_filterUsers);
   }
 
-  // FUNCIÓN PARA INICIALIZAR SOCKET.IO
   void _initializeSocket() {
     _socketService = SocketService();
 
-    // Conectarse al servidor Socket.io
     _socketService
         .connect(widget.token)
         .then((_) {
@@ -44,43 +49,44 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
         })
         .catchError((e) {
           print('❌ Error conectando socket: $e');
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error conectando al servidor')),
-          );
+          _showErrorSnackBar('Error conectando al servidor');
         });
   }
 
-  // FUNCIÓN PARA CARGAR USUARIOS
   Future<void> _loadUsers() async {
-    print('📤 Iniciando carga de usuarios...');
     setState(() {
       isLoading = true;
     });
 
-    try {
-      final usersList = await _apiService.getUsers();
+    final usersList = await _apiService.getUsers();
 
-      print('✅ Usuarios recibidos: ${usersList.length}');
-      print('📊 Datos: $usersList');
-
-      if (mounted) {
-        setState(() {
-          users = usersList;
-          isLoading = false;
-        });
-        print('✅ Estado actualizado. Usuarios en pantalla: ${users.length}');
-      }
-    } catch (e) {
-      print('❌ Error cargando usuarios: $e');
-      if (mounted) {
-        setState(() {
-          isLoading = false;
-        });
-      }
+    if (mounted) {
+      setState(() {
+        users = usersList;
+        filteredUsers = usersList;
+        isLoading = false;
+      });
     }
   }
 
-  // FUNCIÓN PARA IR AL CHAT CON UN USUARIO
+  void _filterUsers() {
+    final query = _searchController.text.toLowerCase();
+
+    setState(() {
+      if (query.isEmpty) {
+        filteredUsers = users;
+      } else {
+        filteredUsers = users
+            .where(
+              (user) =>
+                  user['username'].toLowerCase().contains(query) ||
+                  user['email'].toLowerCase().contains(query),
+            )
+            .toList();
+      }
+    });
+  }
+
   void _openChat(Map<String, dynamic> user) {
     Navigator.push(
       context,
@@ -96,18 +102,45 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
     );
   }
 
-  // FUNCIÓN PARA LOGOUT
   Future<void> _logout() async {
-    await _apiService.clearToken();
-    _socketService.disconnect();
+    // Mostrar confirmación
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Cerrar sesión'),
+        content: Text('¿Seguro que quieres cerrar sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text('Cerrar sesión', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
 
-    if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
+    if (confirmed == true) {
+      await _apiService.clearToken();
+      _socketService.disconnect();
+
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
+      }
     }
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   @override
   void dispose() {
+    _searchController.dispose();
     _socketService.disconnect();
     super.dispose();
   }
@@ -115,14 +148,50 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.lightGrey,
       appBar: AppBar(
-        title: Text('Chats'),
-        backgroundColor: Colors.blue.shade700,
         elevation: 0,
+        backgroundColor: Colors.white,
+        title: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ProfileScreen(
+                  userId: widget.userId,
+                  username: widget.username,
+                  email: 'tu_email@example.com', // Por ahora dejamos esto así
+                  isOwnProfile: true,
+                  status: 'online',
+                ),
+              ),
+            );
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Mensajes', style: AppTextStyles.titleMedium),
+              Text(
+                'Conectado como ${widget.username}',
+                style: AppTextStyles.caption,
+              ),
+            ],
+          ),
+        ),
         actions: [
           PopupMenuButton(
+            icon: Icon(Icons.more_vert, color: AppColors.primaryBlue),
             itemBuilder: (BuildContext context) => [
-              PopupMenuItem(child: Text('Cerrar sesión'), value: 'logout'),
+              PopupMenuItem(
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.red, size: 20),
+                    SizedBox(width: 12),
+                    Text('Cerrar sesión', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+                value: 'logout',
+              ),
             ],
             onSelected: (value) {
               if (value == 'logout') {
@@ -132,69 +201,180 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           ),
         ],
       ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : users.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.people, size: 80, color: Colors.grey),
-                  SizedBox(height: 20),
-                  Text(
-                    'No hay usuarios disponibles',
-                    style: TextStyle(fontSize: 18, color: Colors.grey),
-                  ),
-                  SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _loadUsers,
-                    child: Text('Recargar'),
+      body: Column(
+        children: [
+          // BARRA DE BÚSQUEDA
+          Padding(
+            padding: EdgeInsets.all(16),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
                   ),
                 ],
               ),
-            )
-          : ListView.builder(
-              itemCount: users.length,
-              itemBuilder: (context, index) {
-                final user = users[index];
-                return ListTile(
-                  // Avatar del usuario
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue.shade400,
-                    child: Text(
-                      user['username'][0].toUpperCase(),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar usuario...',
+                  hintStyle: TextStyle(color: Colors.grey.shade400),
+                  prefixIcon: Icon(Icons.search, color: AppColors.primaryBlue),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
-                  // Nombre del usuario
-                  title: Text(
-                    user['username'],
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  // Email del usuario
-                  subtitle: Text(user['email']),
-                  // Estado (online/offline)
-                  trailing: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: user['status'] == 'online'
-                          ? Colors.green
-                          : Colors.grey,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  // Abrir chat al hacer clic
-                  onTap: () => _openChat(user),
-                );
-              },
+                ),
+              ),
             ),
+          ),
+
+          // LISTA DE USUARIOS
+          Expanded(
+            child: isLoading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(AppColors.primaryBlue),
+                    ),
+                  )
+                : filteredUsers.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: 80,
+                          color: Colors.grey.shade300,
+                        ),
+                        SizedBox(height: 20),
+                        Text(
+                          _searchController.text.isEmpty
+                              ? 'No hay usuarios disponibles'
+                              : 'No se encontraron resultados',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                        if (_searchController.text.isEmpty)
+                          SizedBox(height: 20),
+                        if (_searchController.text.isEmpty)
+                          ElevatedButton.icon(
+                            onPressed: _loadUsers,
+                            icon: Icon(Icons.refresh),
+                            label: Text('Recargar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryBlue,
+                            ),
+                          ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: filteredUsers.length,
+                    itemBuilder: (context, index) {
+                      final user = filteredUsers[index];
+                      final isOnline = user['status'] == 'online';
+
+                      return Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 8,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () => _openChat(user),
+                              borderRadius: BorderRadius.circular(16),
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    // AVATAR CON ESTADO
+                                    Stack(
+                                      children: [
+                                        UserAvatar(
+                                          username: user['username'],
+                                          size: 56,
+                                        ),
+                                        // Indicador online/offline
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            width: 16,
+                                            height: 16,
+                                            decoration: BoxDecoration(
+                                              color: isOnline
+                                                  ? AppColors.successGreen
+                                                  : Colors.grey.shade400,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 2,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(width: 16),
+
+                                    // INFORMACIÓN DEL USUARIO
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            user['username'],
+                                            style: AppTextStyles.titleMedium
+                                                .copyWith(fontSize: 16),
+                                          ),
+                                          SizedBox(height: 4),
+                                          Text(
+                                            user['email'],
+                                            style: AppTextStyles.caption,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // FLECHA
+                                    Icon(
+                                      Icons.chevron_right,
+                                      color: AppColors.primaryBlue,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: _loadUsers,
-        backgroundColor: Colors.blue.shade700,
+        backgroundColor: AppColors.primaryBlue,
         child: Icon(Icons.refresh),
       ),
     );

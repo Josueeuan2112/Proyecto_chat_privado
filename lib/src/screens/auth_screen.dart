@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:whatsapp_flutter/src/service/api_service.dart';
+import 'package:whatsapp_flutter/src/constants/app_colors.dart';
+import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -9,15 +11,14 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   final ApiService _apiService = ApiService();
 
-  // Controladores para capturar texto de los campos
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _usernameController = TextEditingController();
 
-  // Variables para controlar el estado
-  bool isLogin = true; // true = login, false = registro
+  bool isLogin = true;
   bool isLoading = false;
   String? errorMessage;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -27,7 +28,6 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  // FUNCIÓN PARA MANEJAR LOGIN
   Future<void> _handleLogin() async {
     setState(() {
       isLoading = true;
@@ -40,8 +40,6 @@ class _AuthScreenState extends State<AuthScreen> {
     );
 
     if (result['success']) {
-      print('✅ Login exitoso');
-      // Ir a la pantalla de chats
       if (mounted) {
         Navigator.pushReplacementNamed(
           context,
@@ -66,7 +64,6 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  // FUNCIÓN PARA MANEJAR REGISTRO
   Future<void> _handleRegister() async {
     setState(() {
       isLoading = true;
@@ -80,8 +77,6 @@ class _AuthScreenState extends State<AuthScreen> {
     );
 
     if (result['success']) {
-      print('✅ Registro exitoso');
-      // Ir a la pantalla de chats
       if (mounted) {
         Navigator.pushReplacementNamed(
           context,
@@ -110,147 +105,258 @@ class _AuthScreenState extends State<AuthScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Colors.blue.shade400, Colors.blue.shade900],
-          ),
-        ),
-        child: Center(
+        decoration: BoxDecoration(gradient: AppColors.primaryGradient),
+        child: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(20),
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // TÍTULO
-                Icon(Icons.chat_bubble, size: 80, color: Colors.white),
-                SizedBox(height: 20),
-                Text(
-                  isLogin ? 'WhatsApp privado' : 'Crear Cuenta',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+                SizedBox(height: 40),
+
+                // LOGO Y TÍTULO
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline,
+                    size: 50,
                     color: Colors.white,
                   ),
                 ),
                 SizedBox(height: 30),
 
-                // CAMPOS DEL FORMULARIO
-                // Campo de username (solo visible si es registro)
-                if (!isLogin)
-                  TextField(
+                Text(
+                  isLogin ? 'ola' : 'Crear tu cuenta',
+                  style: AppTextStyles.titleLarge,
+                ),
+                SizedBox(height: 10),
+
+                Text(
+                  isLogin ? 'entrale al chat we' : 'Únete al chat we',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+                SizedBox(height: 40),
+
+                // CAMPO USERNAME (solo registro)
+                if (!isLogin) ...[
+                  _buildTextField(
                     controller: _usernameController,
-                    decoration: InputDecoration(
-                      hintText: 'Nombre de usuario',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                      prefixIcon: Icon(Icons.person),
-                    ),
+                    label: 'Nombre de usuario',
+                    icon: Icons.person_outline,
+                    keyboardType: TextInputType.text,
                   ),
-                if (!isLogin) SizedBox(height: 15),
+                  SizedBox(height: 16),
+                ],
 
-                // Campo de email
-                TextField(
+                // CAMPO EMAIL
+                _buildTextField(
                   controller: _emailController,
+                  label: 'Email',
+                  icon: Icons.mail_outline,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    hintText: 'Email',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                    prefixIcon: Icon(Icons.email),
-                  ),
                 ),
-                SizedBox(height: 15),
+                SizedBox(height: 16),
 
-                // Campo de contraseña
-                TextField(
+                // CAMPO PASSWORD
+                _buildPasswordField(
                   controller: _passwordController,
-                  obscureText: true,
-                  decoration: InputDecoration(
-                    hintText: 'Contraseña',
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
-                    prefixIcon: Icon(Icons.lock),
-                  ),
+                  label: 'Contraseña',
                 ),
-                SizedBox(height: 20),
+                SizedBox(height: 24),
 
-                // MENSAJE DE ERROR (si existe)
+                // ERROR MESSAGE
                 if (errorMessage != null)
                   Container(
-                    padding: EdgeInsets.all(10),
+                    padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade300,
-                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.red.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.red.withOpacity(0.5)),
                     ),
-                    child: Text(
-                      errorMessage!,
-                      style: TextStyle(color: Colors.red.shade900),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            errorMessage!,
+                            style: TextStyle(color: Colors.red, fontSize: 14),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 if (errorMessage != null) SizedBox(height: 20),
 
-                // BOTÓN DE LOGIN/REGISTRO
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: isLoading
-                        ? null
-                        : (isLogin ? _handleLogin : _handleRegister),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: isLoading
-                        ? CircularProgressIndicator(color: Colors.white)
-                        : Text(
-                            isLogin ? 'Iniciar Sesión' : 'Registrarse',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                  ),
+                // BOTÓN LOGIN/REGISTRO
+                _buildGradientButton(
+                  label: isLogin ? 'Iniciar Sesión' : 'Registrarse',
+                  onPressed: isLoading
+                      ? null
+                      : (isLogin ? _handleLogin : _handleRegister),
+                  isLoading: isLoading,
                 ),
                 SizedBox(height: 20),
 
-                // BOTÓN PARA CAMBIAR ENTRE LOGIN Y REGISTRO
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      isLogin = !isLogin;
-                      errorMessage = null;
-                      _emailController.clear();
-                      _passwordController.clear();
-                      _usernameController.clear();
-                    });
-                  },
-                  child: Text(
-                    isLogin
-                        ? '¿No tienes putito? puchale aqui zorra'
-                        : '¿Ya tienes? pues entra wey',
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
+                // CAMBIAR ENTRE LOGIN Y REGISTRO
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      isLogin ? '¿No tienes cuenta? ' : '¿Ya tienes cuenta? ',
+                      style: TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          isLogin = !isLogin;
+                          errorMessage = null;
+                          _emailController.clear();
+                          _passwordController.clear();
+                          _usernameController.clear();
+                        });
+                      },
+                      child: Text(
+                        isLogin ? 'hazla we' : 'entrale we',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+
+                SizedBox(height: 40),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // WIDGET PARA CAMPOS DE TEXTO
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required TextInputType keyboardType,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          hintText: label,
+          hintStyle: TextStyle(color: Colors.grey.shade400),
+          prefixIcon: Icon(icon, color: AppColors.primaryBlue),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  // WIDGET PARA CAMPO DE CONTRASEÑA
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String label,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: _obscurePassword,
+        decoration: InputDecoration(
+          hintText: label,
+          hintStyle: TextStyle(color: Colors.grey.shade400),
+          prefixIcon: Icon(Icons.lock_outline, color: AppColors.primaryBlue),
+          suffixIcon: GestureDetector(
+            onTap: () {
+              setState(() {
+                _obscurePassword = !_obscurePassword;
+              });
+            },
+            child: Icon(
+              _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        ),
+      ),
+    );
+  }
+
+  // WIDGET PARA BOTÓN CON GRADIENTE
+  Widget _buildGradientButton({
+    required String label,
+    required VoidCallback? onPressed,
+    required bool isLoading,
+  }) {
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: AppColors.buttonGradient,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.successGreen.withOpacity(0.3),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: isLoading
+                ? SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(Colors.white),
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Text(label, style: AppTextStyles.buttonText),
           ),
         ),
       ),
