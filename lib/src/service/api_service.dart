@@ -221,22 +221,36 @@ class ApiService {
   Future<void> markMessagesAsRead(int userId) async {
     try {
       final token = await getToken();
-      if (token == null) return;
+      if (token == null) {
+        print('⚠️ Sin token, no se puede marcar como leído');
+        return;
+      }
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/messages/mark-read'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'receiverId': userId}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/messages/mark-read'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'receiverId': userId}),
+          )
+          .timeout(
+            Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Timeout marcando como leído');
+            },
+          );
 
       if (response.statusCode == 200) {
-        print('✅ Mensajes marcados como leídos');
+        final data = jsonDecode(response.body);
+        print('✅ ${data['markedCount'] ?? 0} mensajes marcados como leídos');
+      } else {
+        print('⚠️ Respuesta inesperada: ${response.statusCode}');
       }
     } catch (e) {
       print('❌ Error marcando como leído: $e');
+      // No relanzar el error, solo logging
     }
   }
 }

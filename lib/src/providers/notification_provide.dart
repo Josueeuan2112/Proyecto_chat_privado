@@ -42,16 +42,24 @@ class NotificationProvider extends ChangeNotifier {
 
   // Marcar mensajes como leídos
   Future<void> markAsRead(int userId) async {
+    // No hacer nada si ya no hay mensajes sin leer de este usuario
+    if (!_unreadCounts.containsKey(userId) || _unreadCounts[userId] == 0) {
+      return;
+    }
+
     try {
+      print('📖 Intentando marcar como leído para usuario $userId...');
+
       await _apiService.markMessagesAsRead(userId);
 
-      // Actualizar local
+      // Actualizar local inmediatamente
       _unreadCounts.remove(userId);
       notifyListeners();
 
       print('✅ Mensajes de usuario $userId marcados como leídos');
     } catch (e) {
       print('❌ Error marcando como leído: $e');
+      // No lanzar error, solo logging
     }
   }
 

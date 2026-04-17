@@ -37,6 +37,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool isLoading = true;
   bool isOtherUserTyping = false;
   bool _isComposing = false;
+  bool _hasMarkedAsRead = false;
 
   @override
   void initState() {
@@ -49,11 +50,29 @@ class _ChatScreenState extends State<ChatScreen> {
       });
     });
 
-    Future.delayed(Duration(milliseconds: 500), () {
-      if (mounted) {
-        context.read<NotificationProvider>().markAsRead(widget.otherUserId);
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markMessagesAsRead();
     });
+  }
+
+  // MARCAR MENSAJES COMO LEÍDOS DE FORMA SEGURA
+  Future<void> _markMessagesAsRead() async {
+    // Evitar marcar dos veces
+    if (_hasMarkedAsRead || !mounted) return;
+
+    _hasMarkedAsRead = true;
+
+    try {
+      await Future.delayed(Duration(milliseconds: 300));
+      if (!mounted) return;
+
+      print('📖 Marcando mensajes de ${widget.otherUsername} como leídos...');
+      await context.read<NotificationProvider>().markAsRead(widget.otherUserId);
+
+      print('✅ Mensajes marcados como leídos');
+    } catch (e) {
+      print('❌ Error marcando como leído: $e');
+    }
   }
 
   Future<void> _loadMessages() async {
@@ -74,7 +93,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _setupSocketListeners() {
     widget.socketService.onMessageReceived = (message) {
-      if (message['sender_id'] == widget.otherUserId) {
+      if (message['sender_id'] == widget.otherUserId && mounted) {
         setState(() {
           messages.add(message);
         });
@@ -83,7 +102,8 @@ class _ChatScreenState extends State<ChatScreen> {
     };
 
     widget.socketService.onMessageSent = (message) {
-      if (messages.isNotEmpty &&
+      if (mounted &&
+          messages.isNotEmpty &&
           messages.last['content'] == message['content']) {
         setState(() {
           messages.last = message;
@@ -92,15 +112,15 @@ class _ChatScreenState extends State<ChatScreen> {
     };
 
     widget.socketService.onUserTyping = (data) {
-      if (data['userId'] == widget.otherUserId) {
+      if (data['userId'] == widget.otherUserId && mounted) {
         setState(() {
           isOtherUserTyping = true;
-        });
+        }); //lll
       }
     };
 
     widget.socketService.onUserStopTyping = (userId) {
-      if (userId == widget.otherUserId) {
+      if (userId == widget.otherUserId && mounted) {
         setState(() {
           isOtherUserTyping = false;
         });
@@ -108,9 +128,11 @@ class _ChatScreenState extends State<ChatScreen> {
     };
 
     widget.socketService.onError = (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $error')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $error')));
+      }
     };
   }
 
@@ -164,6 +186,14 @@ class _ChatScreenState extends State<ChatScreen> {
     _messageController.dispose();
     _scrollController.dispose();
     widget.socketService.notifyStopTyping(widget.otherUserId);
+
+    // Limpiar callbacks para evitar memory leaks
+    widget.socketService.onMessageReceived = null;
+    widget.socketService.onMessageSent = null;
+    widget.socketService.onUserTyping = null;
+    widget.socketService.onUserStopTyping = null;
+    widget.socketService.onError = null;
+
     super.dispose();
   }
 
