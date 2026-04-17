@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:whatsapp_flutter/src/service/api_service.dart';
 import 'package:whatsapp_flutter/src/constants/app_colors.dart';
 import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
 class AuthScreen extends StatefulWidget {
   @override
@@ -41,6 +43,12 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (result['success']) {
       if (mounted) {
+        await context.read<UserProvider>().loadUserFromLogin(
+          userId: result['userId'],
+          username: result['username'],
+          email: _emailController.text.trim(),
+          token: result['token'],
+        );
         Navigator.pushReplacementNamed(
           context,
           '/chats',
@@ -78,6 +86,13 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (result['success']) {
       if (mounted) {
+        await context.read<UserProvider>().loadUserFromLogin(
+          userId: result['userId'],
+          username: result['username'],
+          email: _emailController.text.trim(),
+          token: result['token'],
+        );
+
         Navigator.pushReplacementNamed(
           context,
           '/chats',

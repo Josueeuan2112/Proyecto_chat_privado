@@ -4,6 +4,8 @@ import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
 import 'package:whatsapp_flutter/src/widgets/user_avatar.dart';
 import 'edit_profile_screen.dart';
 import 'change_photo_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   final int userId;
@@ -33,11 +35,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _currentUsername = widget.username;
     _currentEmail = widget.email;
+
+    if (widget.isOwnProfile) {
+      _refreshProfileData(); // Cargar datos actualizados
+    }
+  }
+
+  Future<void> _refreshProfileData() async {
+    // Opcional: puedes cargar datos frescos del servidor aquí
+    // Por ahora no es necesario porque ya pasamos los datos
   }
 
   void _onProfileUpdated() {
-    // Este callback se llamará cuando se actualice el perfil
-    // Puedes refrescar los datos aquí
+    // Refrescar datos del Provider
+    if (widget.isOwnProfile && mounted) {
+      context.read<UserProvider>().refreshUserFromServer();
+    }
   }
 
   void _openEditProfile() {

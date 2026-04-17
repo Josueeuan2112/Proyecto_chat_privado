@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:whatsapp_flutter/src/service/user_service.dart';
 import 'package:whatsapp_flutter/src/constants/app_colors.dart';
 import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
 class EditProfileScreen extends StatefulWidget {
   final int userId;
@@ -73,7 +75,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         setState(() {
           successMessage = 'Perfil actualizado exitosamente';
         });
-        widget.onProfileUpdated();
+
+        // Actualizar el Provider con los nuevos datos
+        if (mounted) {
+          await context.read<UserProvider>().updateProfile(
+            username: _usernameController.text.trim(),
+            email: _emailController.text.trim(),
+          );
+        }
 
         Future.delayed(Duration(seconds: 2), () {
           Navigator.pop(context, {

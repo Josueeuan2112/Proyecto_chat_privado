@@ -6,6 +6,8 @@ import 'package:whatsapp_flutter/src/constants/app_colors.dart';
 import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
 import 'package:whatsapp_flutter/src/widgets/user_avatar.dart';
 import 'chat_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
 class ChatsListScreen extends StatefulWidget {
   final int userId;
@@ -30,13 +32,28 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
   List<Map<String, dynamic>> filteredUsers = [];
   bool isLoading = true;
   TextEditingController _searchController = TextEditingController();
+  String? _currentUserEmail;
 
   @override
   void initState() {
     super.initState();
     _initializeSocket();
     _loadUsers();
+    _loadCurrentUserEmail();
     _searchController.addListener(_filterUsers);
+  }
+
+  Future<void> _loadCurrentUserEmail() async {
+    try {
+      final userInfo = await _apiService.getUserProfile(widget.userId);
+      if (userInfo['success'] && mounted) {
+        setState(() {
+          _currentUserEmail = userInfo['data']['email'];
+        });
+      }
+    } catch (e) {
+      print('Error cargando email del usuario: $e');
+    }
   }
 
   void _initializeSocket() {
@@ -127,6 +144,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       _socketService.disconnect();
 
       if (mounted) {
+        context.read<UserProvider>().clearUser();
         Navigator.pushNamedAndRemoveUntil(context, '/auth', (route) => false);
       }
     }
@@ -152,34 +170,40 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
-        title: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ProfileScreen(
-                  userId: widget.userId,
-                  username: widget.username,
-                  email: 'tu_email@example.com', // Por ahora dejamos esto así
-                  isOwnProfile: true,
-                  status: 'online',
-                ),
+        title: Consumer<UserProvider>(
+          builder: (context, userProvider, _) {
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfileScreen(
+                      userId: userProvider.userId ?? widget.userId,
+                      username: userProvider.username ?? widget.username,
+                      email:
+                          userProvider.email ??
+                          _currentUserEmail ??
+                          'cargando...',
+                      isOwnProfile: true,
+                      status: 'online',
+                    ),
+                  ),
+                ).then((_) {
+                  _loadUsers();
+                });
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Mensajes', style: AppTextStyles.titleMedium),
+                  Text(
+                    'Conectado como ${userProvider.username ?? widget.username}',
+                    style: AppTextStyles.caption,
+                  ),
+                ],
               ),
-            ).then((_) {
-              // Al volver del perfil, recargamos la lista de usuarios para reflejar cualquier cambio
-              _loadUsers();
-            });
+            );
           },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Mensajes', style: AppTextStyles.titleMedium),
-              Text(
-                'Conectado como ${widget.username}',
-                style: AppTextStyles.caption,
-              ),
-            ],
-          ),
         ),
         actions: [
           PopupMenuButton(

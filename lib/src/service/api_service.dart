@@ -159,4 +159,32 @@ class ApiService {
       return [];
     }
   }
+
+  // FUNCIÓN PARA OBTENER PERFIL DEL USUARIO
+  Future<Map<String, dynamic>> getUserProfile(int userId) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'error': 'Sin token'};
+      }
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/auth/profile/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return {'success': true, 'data': data};
+      } else {
+        return {'success': false};
+      }
+    } catch (e) {
+      print('Error obteniendo perfil: $e');
+      return {'success': false};
+    }
+  }
 }
