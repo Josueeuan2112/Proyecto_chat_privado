@@ -183,7 +183,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   status: isOtherUserTyping ? 'online' : 'offline',
                 ),
               ),
-            );
+            ).then((_) {
+              _loadMessages(); //refrecar perfil al volver del perfil
+            });
           },
           child: Row(
             children: [

@@ -76,7 +76,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         widget.onProfileUpdated();
 
         Future.delayed(Duration(seconds: 2), () {
-          Navigator.pop(context);
+          Navigator.pop(context, {
+            'username': _usernameController.text.trim(),
+            'email': _emailController.text.trim(),
+          });
         });
       } else {
         setState(() {

@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'api_service.dart';
 
 class UserService {
-  static const String baseUrl = 'http://192.168.1.100:3000';
+  static const String baseUrl = 'http://192.168.1.153:3000';
   final ApiService _apiService = ApiService();
 
   // Actualizar perfil (username y email)
@@ -19,7 +19,7 @@ class UserService {
       }
 
       final response = await http.put(
-        Uri.parse('$baseUrl/api/users/$userId'),
+        Uri.parse('$baseUrl/api/auth/profile/$userId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -50,11 +50,11 @@ class UserService {
     try {
       final token = await _apiService.getToken();
       if (token == null) {
-        return {'success': false};
+        return {'success': false, 'error': 'No hay token de autenticación'};
       }
 
       final response = await http.get(
-        Uri.parse('$baseUrl/api/users/$userId'),
+        Uri.parse('$baseUrl/api/auth/profile/$userId'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -65,10 +65,13 @@ class UserService {
         final data = jsonDecode(response.body);
         return {'success': true, 'data': data};
       } else {
-        return {'success': false};
+        return {
+          'success': false,
+          'error': 'Error al obtener información del usuario',
+        };
       }
     } catch (e) {
-      return {'success': false};
+      return {'success': false, 'error': 'Error de conexión: $e'};
     }
   }
 }

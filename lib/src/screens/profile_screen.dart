@@ -52,11 +52,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     ).then((result) {
-      if (result != null) {
+      if (result != null && result is Map<String, dynamic>) {
+        print('✅ Datos actualizados: $result');
         setState(() {
           _currentUsername = result['username'] ?? _currentUsername;
           _currentEmail = result['email'] ?? _currentEmail;
         });
+
+        // Mostrar confirmación
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Perfil actualizado correctamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
       }
     });
   }

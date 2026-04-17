@@ -165,7 +165,10 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                   status: 'online',
                 ),
               ),
-            );
+            ).then((_) {
+              // Al volver del perfil, recargamos la lista de usuarios para reflejar cualquier cambio
+              _loadUsers();
+            });
           },
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
