@@ -8,6 +8,7 @@ import 'package:whatsapp_flutter/src/constants/app_colors.dart';
 import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
 import 'package:whatsapp_flutter/src/widgets/user_avatar.dart';
 import 'package:whatsapp_flutter/src/widgets/typing_indicator.dart';
+import 'package:whatsapp_flutter/src/service/image_upload_service.dart';
 
 class ChatScreen extends StatefulWidget {
   final int currentUserId;
@@ -32,12 +33,14 @@ class _ChatScreenState extends State<ChatScreen> {
   final ApiService _apiService = ApiService();
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImageUploadService _imageUploadService = ImageUploadService();
 
   List<Map<String, dynamic>> messages = [];
   bool isLoading = true;
   bool isOtherUserTyping = false;
   bool _isComposing = false;
   bool _hasMarkedAsRead = false;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -159,6 +162,67 @@ class _ChatScreenState extends State<ChatScreen> {
 
     widget.socketService.notifyStopTyping(widget.otherUserId);
     widget.socketService.sendMessage(widget.otherUserId, content);
+  }
+
+  // ENVIAR IMAGEN
+  Future<void> _sendImage({required bool fromCamera}) async {
+    setState(() {
+      _isUploadingImage = true;
+    });
+
+    try {
+      print('🖼️ Iniciando envío de imagen...');
+
+      // Seleccionar, comprimir y subir imagen
+      final imageUrl = await _imageUploadService.selectAndUploadImage(
+        fromCamera: fromCamera,
+      );
+
+      if (imageUrl == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al subir imagen'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Agregar imagen a la lista de mensajes localmente
+      if (mounted) {
+        setState(() {
+          messages.add({
+            'id': -1,
+            'sender_id': widget.currentUserId,
+            'receiver_id': widget.otherUserId,
+            'content': imageUrl,
+            'message_type': 'image',
+            'timestamp': DateTime.now().toIso8601String(),
+            'is_read': 0,
+          });
+        });
+      }
+
+      _scrollToBottom();
+
+      // Enviar por Socket.io
+      widget.socketService.sendImage(widget.otherUserId, imageUrl);
+
+      print('✅ Imagen enviada exitosamente');
+    } catch (e) {
+      print('❌ Error enviando imagen: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploadingImage = false;
+        });
+      }
+    }
   }
 
   void _scrollToBottom() {
@@ -342,17 +406,68 @@ class _ChatScreenState extends State<ChatScreen> {
                                   : CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  message['content'],
-                                  style: TextStyle(
-                                    color: isCurrentUser
-                                        ? Colors.white
-                                        : AppColors.textDark,
-                                    fontSize: 15,
-                                    height: 1.4,
+                                // Mostrar imagen o texto
+                                if (message['message_type'] == 'image')
+                                  // SI ES IMAGEN
+                                  Container(
+                                    width: 200,
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.2),
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.network(
+                                        'http://192.168.1.100:3000${message['content']}', // ACTUALIZAR IP
+                                        fit: BoxFit.cover,
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return Center(
+                                                child: CircularProgressIndicator(
+                                                  valueColor:
+                                                      AlwaysStoppedAnimation(
+                                                        AppColors.primaryBlue,
+                                                      ),
+                                                ),
+                                              );
+                                            },
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey.shade300,
+                                                child: Icon(
+                                                  Icons.broken_image,
+                                                  color: Colors.grey,
+                                                ),
+                                              );
+                                            },
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  // SI ES TEXTO
+                                  Text(
+                                    message['content'],
+                                    style: TextStyle(
+                                      color: isCurrentUser
+                                          ? Colors.white
+                                          : AppColors.textDark,
+                                      fontSize: 15,
+                                      height: 1.4,
+                                    ),
                                   ),
-                                ),
+
                                 SizedBox(height: 6),
+
+                                // Timestamp
                                 Text(
                                   _formatTime(message['timestamp']),
                                   style: TextStyle(
@@ -382,6 +497,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
 
           // BARRA DE ENTRADA
+          // BARRA DE ENTRADA DE MENSAJES
           Container(
             padding: EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -395,66 +511,130 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
             child: SafeArea(
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.lightGrey,
-                        borderRadius: BorderRadius.circular(25),
-                        border: Border.all(
-                          color: Colors.grey.shade300,
-                          width: 1,
+                  // Indicador de carga de imagen
+                  if (_isUploadingImage)
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: LinearProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation(
+                          AppColors.primaryBlue,
                         ),
-                      ),
-                      child: TextField(
-                        controller: _messageController,
-                        onChanged: _onMessageChanged,
-                        maxLines: null,
-                        decoration: InputDecoration(
-                          hintText: 'Escribe un mensaje...',
-                          hintStyle: TextStyle(color: Colors.grey.shade500),
-                          prefixIcon: Icon(
-                            Icons.add_circle_outline,
-                            color: AppColors.primaryBlue,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
+                        minHeight: 3,
                       ),
                     ),
-                  ),
-                  SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: AppColors.buttonGradient,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.successGreen.withOpacity(0.3),
-                          blurRadius: 8,
-                          offset: Offset(0, 2),
+
+                  // Row con botones de entrada
+                  Row(
+                    children: [
+                      // Botón más (para imágenes)
+                      PopupMenuButton<String>(
+                        icon: Icon(
+                          Icons.add_circle_outline,
+                          color: AppColors.primaryBlue,
+                          size: 28,
                         ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _isComposing ? _sendMessage : null,
-                        borderRadius: BorderRadius.circular(30),
-                        child: Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Icon(
-                            Icons.send_rounded,
-                            color: Colors.white,
-                            size: 20,
+                        itemBuilder: (BuildContext context) => [
+                          PopupMenuItem<String>(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.photo_library,
+                                  color: AppColors.primaryBlue,
+                                ),
+                                SizedBox(width: 12),
+                                Text('Galería'),
+                              ],
+                            ),
+                            value: 'gallery',
+                          ),
+                          PopupMenuItem<String>(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.camera_alt,
+                                  color: AppColors.primaryBlue,
+                                ),
+                                SizedBox(width: 12),
+                                Text('Cámara'),
+                              ],
+                            ),
+                            value: 'camera',
+                          ),
+                        ],
+                        onSelected: (value) {
+                          if (value == 'gallery') {
+                            _sendImage(fromCamera: false);
+                          } else if (value == 'camera') {
+                            _sendImage(fromCamera: true);
+                          }
+                        },
+                      ),
+                      SizedBox(width: 8),
+
+                      // Campo de texto
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.lightGrey,
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1,
+                            ),
+                          ),
+                          child: TextField(
+                            controller: _messageController,
+                            onChanged: _onMessageChanged,
+                            maxLines: null,
+                            decoration: InputDecoration(
+                              hintText: 'Escribe un mensaje...',
+                              hintStyle: TextStyle(color: Colors.grey.shade500),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                      SizedBox(width: 8),
+
+                      // Botón enviar
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: AppColors.buttonGradient,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.successGreen.withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: _isComposing && !_isUploadingImage
+                                ? _sendMessage
+                                : null,
+                            borderRadius: BorderRadius.circular(30),
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Icon(
+                                Icons.send_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

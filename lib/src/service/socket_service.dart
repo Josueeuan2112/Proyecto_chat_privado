@@ -108,6 +108,18 @@ class SocketService {
     print('📤 Mensaje enviado a usuario $receiverId');
   }
 
+  // ENVIAR IMAGEN
+  void sendImage(int receiverId, String imageUrl) {
+    if (!isConnected) {
+      print('❌ Socket no está conectado');
+      return;
+    }
+
+    socket.emit('send_image', {'receiverId': receiverId, 'imageUrl': imageUrl});
+
+    print('🖼️ Imagen enviada a usuario $receiverId');
+  }
+
   // FUNCIÓN PARA NOTIFICAR QUE ESTÁ ESCRIBIENDO
   void notifyTyping(int receiverId) {
     if (!isConnected) return;
