@@ -2,7 +2,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'api_service.dart';
 
 class SocketService {
-  static const String baseUrl = 'http://192.168.1.153:3000';
+  static const String baseUrl = 'http://localhost:3000';
   late IO.Socket socket;
   bool isConnected = false;
 

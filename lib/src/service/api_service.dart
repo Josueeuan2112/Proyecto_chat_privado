@@ -6,7 +6,7 @@ class ApiService {
   // URL de tu servidor (CAMBIAR SEGÚN TU IP LOCAL)
   // Para obtener tu IP local: en terminal escribe: ipconfig (Windows)
   // Busca "IPv4 Address" y úsala en lugar de 192.168.1.100
-  static const String baseUrl = 'http://192.168.1.153:3000';
+  static const String baseUrl = 'http://localhost:3000';
 
   // Guardar token en el dispositivo
   Future<void> saveToken(String token) async {
