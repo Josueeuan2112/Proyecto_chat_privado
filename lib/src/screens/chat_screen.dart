@@ -424,7 +424,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     child: ClipRRect(
                                       borderRadius: BorderRadius.circular(12),
                                       child: Image.network(
-                                        'http://192.168.1.100:3000${message['content']}', // ACTUALIZAR IP
+                                        'http://192.168.1.153:3000${message['content']}', // ACTUALIZAR IP
                                         fit: BoxFit.cover,
                                         loadingBuilder:
                                             (context, child, loadingProgress) {

@@ -4,7 +4,7 @@ import 'image_service.dart';
 import 'api_service.dart';
 
 class ImageUploadService {
-  static const String baseUrl = 'http://localhost:3000'; // ACTUALIZAR IP
+  static const String baseUrl = 'http://192.168.1.153:3000'; // ACTUALIZAR IP
   final ApiService _apiService = ApiService();
   final ImageService _imageService = ImageService();
 

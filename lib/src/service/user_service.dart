@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'api_service.dart';
 
 class UserService {
-  static const String baseUrl = 'http://localhost:3000';
+  static const String baseUrl = 'http://192.168.1.153:3000';
   final ApiService _apiService = ApiService();
 
   // Actualizar perfil (username y email)
