@@ -52,9 +52,61 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     });
 
     // Unirse a la sala del grupo
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _ensureSocketConnected();
       _joinGroup();
     });
+  }
+
+  // ASEGURAR QUE SOCKET ESTÁ CONECTADO
+  Future<void> _ensureSocketConnected() async {
+    print('🔌 Verificando conexión del socket...');
+
+    if (widget.socketService.isConnected) {
+      print('✅ Socket ya está conectado');
+      return;
+    }
+
+    try {
+      print('📡 Socket no está conectado, intentando...');
+
+      final token = await _apiService.getToken();
+
+      if (token == null) {
+        print('❌ Error: No hay token disponible');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: No hay sesión activa'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      print('🔐 Token obtenido: ${token.substring(0, 20)}...');
+
+      // Conectar y esperar
+      await widget.socketService.connect(token);
+
+      // Esperar a que se autentique
+      await Future.delayed(Duration(milliseconds: 500));
+
+      if (widget.socketService.isConnected) {
+        print('✅ Socket conectado y autenticado correctamente');
+      } else {
+        print('⚠️ Socket conectado pero no autenticado');
+      }
+    } catch (e) {
+      print('❌ Error en _ensureSocketConnected: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error de conexión: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   // UNIRSE AL GRUPO
@@ -131,6 +183,18 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   // ENVIAR MENSAJE DE TEXTO
   void _sendMessage() {
     if (_messageController.text.trim().isEmpty || !_hasJoinedGroup) {
+      return;
+    }
+
+    // VERIFICAR QUE SOCKET ESTÁ CONECTADO
+    if (!widget.socketService.isConnected) {
+      print('❌ Socket no está conectado, no se puede enviar');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: Desconectado del servidor'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 

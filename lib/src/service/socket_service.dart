@@ -2,7 +2,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'api_service.dart';
 
 class SocketService {
-  static const String baseUrl = 'http://19.2.168.1.153:3000';
+  static const String baseUrl = 'http://localhost:3000';
   late IO.Socket socket;
   bool isConnected = false;
 
@@ -101,11 +101,15 @@ class SocketService {
       // Cuando se conecta
       socket.onConnect((_) {
         print('✅ Socket conectado');
-        isConnected = true;
-        // Autenticarse con el servidor
-        socket.emit('authenticate', token);
-      });
 
+        // Esperar un poco para que la conexión esté lista
+        Future.delayed(Duration(milliseconds: 500), () {
+          print('🔐 Emitiendo token para autenticar...');
+          isConnected = true;
+          socket.emit('authenticate', token);
+          print('📤 Token emitido');
+        });
+      });
       // Cuando se autentica correctamente
       socket.on('authenticated', (data) {
         print('✅ Autenticado en Socket: ${data['username']}');
@@ -221,7 +225,7 @@ class SocketService {
 
     socket.emit('send_group_message', {'groupId': groupId, 'content': content});
 
-    print('Mensaje enviado al grupo $groupId');
+    print('Mensaje del grupo enviado al grupo $groupId');
   }
 
   //enviar imagen al grupo

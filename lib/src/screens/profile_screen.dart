@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:whatsapp_flutter/src/constants/app_colors.dart';
 import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
+import 'package:whatsapp_flutter/src/screens/chat_screen.dart';
 import 'package:whatsapp_flutter/src/service/socket_service.dart';
 import 'package:whatsapp_flutter/src/widgets/user_avatar.dart';
 import 'edit_profile_screen.dart';
@@ -322,7 +323,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 child: _buildActionButton(
                   label: 'Enviar Mensaje',
                   icon: Icons.message,
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    print('💬 Abriendo chat con ${_currentUsername}');
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatScreen(
+                          socketService: _socketService,
+                          currentUserId:
+                              context.read<UserProvider>().userId ?? 0,
+                          currentUsername: widget.username,
+                          otherUserId: widget.userId,
+                          otherUsername: widget.username,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
             ],
