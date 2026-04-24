@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:whatsapp_flutter/src/constants/app_colors.dart';
 import 'package:whatsapp_flutter/src/constants/app_text_styles.dart';
+import 'package:whatsapp_flutter/src/service/socket_service.dart';
 import 'package:whatsapp_flutter/src/widgets/user_avatar.dart';
 import 'edit_profile_screen.dart';
 import 'change_photo_screen.dart';
@@ -13,6 +14,7 @@ class ProfileScreen extends StatefulWidget {
   final String email;
   final bool isOwnProfile;
   final String? status;
+  final SocketService? socketService;
 
   const ProfileScreen({
     required this.userId,
@@ -20,6 +22,7 @@ class ProfileScreen extends StatefulWidget {
     required this.email,
     this.isOwnProfile = false,
     this.status,
+    this.socketService,
   });
 
   @override
@@ -29,12 +32,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   late String _currentUsername;
   late String _currentEmail;
+  late SocketService _socketService;
 
   @override
   void initState() {
     super.initState();
     _currentUsername = widget.username;
     _currentEmail = widget.email;
+    _socketService = widget.socketService ?? SocketService();
 
     if (widget.isOwnProfile) {
       _refreshProfileData(); // Cargar datos actualizados

@@ -253,4 +253,268 @@ class ApiService {
       // No relanzar el error, solo logging
     }
   }
+
+  // ==========================================
+  // FUNCIONES PARA CHATS GRUPALES
+  // ==========================================
+
+  // CREAR NUEVO GRUPO
+  Future<Map<String, dynamic>> createGroup({
+    required String name,
+    required String description,
+    required List<int> memberIds,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'error': 'Sin token'};
+      }
+
+      print('👥 Creando grupo: $name');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/groups/create'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              'name': name,
+              'description': description,
+              'memberIds': memberIds,
+            }),
+          )
+          .timeout(Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('✅ Grupo creado: ${data['groupId']}');
+        return {
+          'success': true,
+          'groupId': data['groupId'],
+          'name': data['name'],
+          'memberCount': data['memberCount'],
+        };
+      } else {
+        final error = jsonDecode(response.body);
+        return {'success': false, 'error': error['error']};
+      }
+    } catch (e) {
+      print('❌ Error creando grupo: $e');
+      return {'success': false, 'error': 'Error: $e'};
+    }
+  }
+
+  // OBTENER GRUPOS DEL USUARIO
+  Future<List<Map<String, dynamic>>> getUserGroups() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return [];
+      }
+
+      print('📋 Obteniendo grupos...');
+
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/groups'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final grupos = List<Map<String, dynamic>>.from(data['grupos'] ?? []);
+        print('✅ ${grupos.length} grupos obtenidos');
+        return grupos;
+      } else {
+        print('⚠️ Error obteniendo grupos: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      print('❌ Error obteniendo grupos: $e');
+      return [];
+    }
+  }
+
+  // OBTENER MIEMBROS DE UN GRUPO
+  Future<List<Map<String, dynamic>>> getGroupMembers(int groupId) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return [];
+      }
+
+      print('👥 Obteniendo miembros del grupo $groupId');
+
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/groups/$groupId/members'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final members = List<Map<String, dynamic>>.from(data['members'] ?? []);
+        print('✅ ${members.length} miembros obtenidos');
+        return members;
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('❌ Error obteniendo miembros: $e');
+      return [];
+    }
+  }
+
+  // OBTENER MENSAJES DE UN GRUPO
+  Future<List<Map<String, dynamic>>> getGroupMessages(int groupId) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return [];
+      }
+
+      print('💬 Obteniendo mensajes del grupo $groupId');
+
+      final response = await http
+          .get(
+            Uri.parse('$baseUrl/api/groups/$groupId/messages'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final messages = List<Map<String, dynamic>>.from(
+          data['messages'] ?? [],
+        );
+        print('✅ ${messages.length} mensajes obtenidos');
+        return messages;
+      } else {
+        return [];
+      }
+    } catch (e) {
+      print('❌ Error obteniendo mensajes: $e');
+      return [];
+    }
+  }
+
+  // AGREGAR MIEMBRO AL GRUPO
+  Future<Map<String, dynamic>> addGroupMember({
+    required int groupId,
+    required int userId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'error': 'Sin token'};
+      }
+
+      print('➕ Agregando usuario $userId al grupo $groupId');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/groups/add-member'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'groupId': groupId, 'userId': userId}),
+          )
+          .timeout(Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        print('✅ Miembro agregado');
+        return {'success': true};
+      } else {
+        final error = jsonDecode(response.body);
+        return {'success': false, 'error': error['error']};
+      }
+    } catch (e) {
+      print('❌ Error agregando miembro: $e');
+      return {'success': false, 'error': 'Error: $e'};
+    }
+  }
+
+  // REMOVER MIEMBRO DEL GRUPO
+  Future<Map<String, dynamic>> removeGroupMember({
+    required int groupId,
+    required int userId,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'error': 'Sin token'};
+      }
+
+      print('➖ Removiendo usuario $userId del grupo $groupId');
+
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/api/groups/remove-member'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({'groupId': groupId, 'userId': userId}),
+          )
+          .timeout(Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        print('✅ Miembro removido');
+        return {'success': true};
+      } else {
+        final error = jsonDecode(response.body);
+        return {'success': false, 'error': error['error']};
+      }
+    } catch (e) {
+      print('❌ Error removiendo miembro: $e');
+      return {'success': false, 'error': 'Error: $e'};
+    }
+  }
+
+  // ELIMINAR GRUPO
+  Future<Map<String, dynamic>> deleteGroup(int groupId) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'error': 'Sin token'};
+      }
+
+      print('🗑️ Eliminando grupo $groupId');
+
+      final response = await http
+          .delete(
+            Uri.parse('$baseUrl/api/groups/$groupId'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+          )
+          .timeout(Duration(seconds: 15));
+
+      if (response.statusCode == 200) {
+        print('✅ Grupo eliminado');
+        return {'success': true};
+      } else {
+        final error = jsonDecode(response.body);
+        return {'success': false, 'error': error['error']};
+      }
+    } catch (e) {
+      print('❌ Error eliminando grupo: $e');
+      return {'success': false, 'error': 'Error: $e'};
+    }
+  }
 }

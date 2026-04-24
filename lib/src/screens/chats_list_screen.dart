@@ -193,6 +193,7 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
                           'cargando...',
                       isOwnProfile: true,
                       status: 'online',
+                      socketService: _socketService,
                     ),
                   ),
                 ).then((_) {
@@ -213,6 +214,20 @@ class _ChatsListScreenState extends State<ChatsListScreen> {
           },
         ),
         actions: [
+          IconButton(
+            icon: Icon(Icons.groups, color: AppColors.primaryBlue),
+            onPressed: () {
+              Navigator.pushNamed(
+                context,
+                '/groups',
+                arguments: {
+                  'userId': widget.userId,
+                  'socketService': _socketService,
+                },
+              );
+            },
+            tooltip: 'Grupos',
+          ),
           PopupMenuButton(
             icon: Icon(Icons.more_vert, color: AppColors.primaryBlue),
             itemBuilder: (BuildContext context) => [

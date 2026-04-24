@@ -4,7 +4,9 @@ import 'package:whatsapp_flutter/src/providers/notification_provide.dart';
 import 'package:whatsapp_flutter/src/providers/user_provider.dart';
 import 'package:whatsapp_flutter/src/screens/auth_screen.dart';
 import 'package:whatsapp_flutter/src/screens/chats_list_screen.dart';
+import 'package:whatsapp_flutter/src/screens/groups_screen.dart';
 import 'package:whatsapp_flutter/src/screens/profile_screen.dart';
+import 'package:whatsapp_flutter/src/service/socket_service.dart';
 
 void main() {
   runApp(
@@ -45,6 +47,15 @@ class MyApp extends StatelessWidget {
           username: 'Usuario',
           email: 'email@example.com',
         ),
+        '/groups': (context) {
+          final args =
+              ModalRoute.of(context)?.settings.arguments
+                  as Map<String, dynamic>?;
+          return GroupsScreen(
+            userId: args?['userId'] ?? 0,
+            socketService: SocketService(),
+          );
+        },
       },
     );
   }
